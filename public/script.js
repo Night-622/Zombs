@@ -1164,7 +1164,7 @@ function loop(t) {
 
 init();
 
-})();}
+})();
 
 /* ============================== DATA: WEAPONS ============================== */
 // order = hotbar order. type: 'melee' | 'ranged'
