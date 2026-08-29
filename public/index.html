@@ -124,6 +124,96 @@
 
   <script src="script.js"></script>
 </body>
+</html>    </div>
+  </div>
+
+  <!-- ======================= GAME CANVAS ======================= -->
+  <canvas id="gameCanvas"></canvas>
+  <canvas id="minimapCanvas"></canvas>
+
+  <!-- ======================= TOP HUD ======================= -->
+  <div id="hud" class="hidden">
+
+    <div class="hud-top-left">
+      <div class="bar-row">
+        <div class="bar health-bar"><div id="healthFill" class="bar-fill"></div><span id="healthText" class="bar-text">100/100</span></div>
+      </div>
+      <div class="resource-row">
+        <div class="res-chip wood"><span class="res-icon">🪵</span><span id="resWood">0</span></div>
+        <div class="res-chip leaf"><span class="res-icon">🍃</span><span id="resLeaf">0</span></div>
+        <div class="res-chip stone"><span class="res-icon">🪨</span><span id="resStone">0</span></div>
+        <div class="res-chip metal"><span class="res-icon">⚙️</span><span id="resMetal">0</span></div>
+        <div class="res-chip gold"><span class="res-icon">🪙</span><span id="resGold">0</span></div>
+        <div class="res-chip ammo"><span class="res-icon">🏹</span><span id="resAmmo">0</span></div>
+      </div>
+    </div>
+
+    <div class="hud-top-center">
+      <div id="phaseLabel" class="phase-label day">☀ DAY 1</div>
+      <div class="phase-bar"><div id="phaseFill" class="phase-fill"></div></div>
+      <div id="waveLabel" class="wave-label"></div>
+    </div>
+
+    <div class="hud-top-right">
+      <button id="btnSaveFile" class="icon-btn" title="Save to file">💾 SAVE</button>
+      <button id="btnUpgrades" class="icon-btn" title="Upgrades (U)">⬆ UPGRADE</button>
+      <button id="btnPause" class="icon-btn" title="Pause (Esc)">⏸</button>
+    </div>
+
+    <!-- ======================= HOTBAR ======================= -->
+    <div id="hotbar" class="hotbar"></div>
+
+    <!-- ======================= BUILD MENU ======================= -->
+    <div id="buildMenu" class="side-panel hidden">
+      <h2>BUILD <span class="hint">(B to close)</span></h2>
+      <div id="buildList" class="grid-list"></div>
+    </div>
+
+    <!-- ======================= UPGRADE SHOP ======================= -->
+    <div id="upgradeMenu" class="side-panel hidden">
+      <h2>UPGRADES <span class="hint">(U to close)</span></h2>
+      <div class="tabs">
+        <button class="tab active" data-tab="stats">SURVIVOR</button>
+        <button class="tab" data-tab="weapons">WEAPONS</button>
+        <button class="tab" data-tab="craft">CRAFT AMMO</button>
+      </div>
+      <div id="tabStats" class="tab-panel"></div>
+      <div id="tabWeapons" class="tab-panel hidden"></div>
+      <div id="tabCraft" class="tab-panel hidden"></div>
+    </div>
+
+    <div id="toast" class="toast"></div>
+  </div>
+
+  <!-- ======================= GAME OVER ======================= -->
+  <div id="gameOverScreen" class="overlay-screen hidden">
+    <div class="start-card">
+      <h1 class="logo dead">YOU DIED</h1>
+      <p id="gameOverStats" class="tagline"></p>
+      <div class="start-buttons">
+        <button id="btnRestart" class="btn btn-primary">NEW SURVIVOR</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================= PAUSE ======================= -->
+  <div id="pauseScreen" class="overlay-screen hidden">
+    <div class="start-card">
+      <h1 class="logo">PAUSED</h1>
+      <div class="start-buttons">
+        <button id="btnResume" class="btn btn-primary">RESUME</button>
+        <button id="btnSaveFile2" class="btn btn-secondary">SAVE TO FILE</button>
+        <label class="btn btn-secondary file-btn">
+          LOAD FILE...
+          <input type="file" id="loadFileInput2" accept="application/json" hidden>
+        </label>
+        <button id="btnQuit" class="btn btn-danger">QUIT TO MENU</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
 </html>  </div>
 
   <!-- ======================= GAME CANVAS ======================= -->
