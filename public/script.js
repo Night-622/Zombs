@@ -39,21 +39,136 @@ function mulberry32(seed) {
 /* ============================== DATA: WEAPONS ============================== */
 // order = hotbar order. type: 'melee' | 'ranged'
 const WEAPONS = {
-  fists:   { name:"Fists",    icon:"👊", type:"melee",  damage:5,  range:44, arc:1.1, cooldown:420, cost:0, order:1,
-             harvest:{ tree:{wood:1,leaf:1}, rock:{stone:1}, ore:{metal:1} } },
-  hatchet: { name:"Hatchet",  icon:"🪓", type:"melee",  damage:14, range:50, arc:1.0, cooldown:480, cost:0, order:2,
-             harvest:{ tree:{wood:3,leaf:2}, rock:{stone:2}, ore:{metal:1} } },
-  pickaxe: { name:"Pickaxe",  icon:"⛏",  type:"melee",  damage:10, range:50, arc:1.0, cooldown:460, cost:20, order:3,
-             harvest:{ tree:{wood:1,leaf:1}, rock:{stone:9}, ore:{metal:7} } },
-  // Starter ranged weapon. Tap = quick weak shot, hold to charge for more damage. Uses arrows (ammo).
-  bow:     { name:"Bow",      icon:"🏹", type:"bow", cost:0, order:4, ammoCost:1, bulletSpeed:780,
-             minDmg:5, midDmgMin:10, midDmgMax:15, maxDmg:20, minChargeMs:180, maxChargeMs:750 },
-  pistol:  { name:"Pistol",   icon:"🔫", type:"ranged", damage:11, cooldown:290, bulletSpeed:640, spread:0.05, ammoCost:1, cost:50,  order:5 },
-  smg:     { name:"SMG",      icon:"💥", type:"ranged", damage:6,  cooldown:95,  bulletSpeed:680, spread:0.13, ammoCost:1, cost:110, order:6 },
-  shotgun: { name:"Shotgun",  icon:"✹",  type:"ranged", damage:9,  pellets:6, cooldown:680, bulletSpeed:600, spread:0.38, ammoCost:3, cost:160, order:7 },
-  rifle:   { name:"Rifle",    icon:"🎯", type:"ranged", damage:20, cooldown:240, bulletSpeed:760, spread:0.04, ammoCost:2, cost:250, order:8 },
-  sniper:  { name:"Sniper",   icon:"🔭", type:"ranged", damage:65, cooldown:1150,bulletSpeed:1100,spread:0.008,ammoCost:4, cost:380, order:9 },
-  rocket:  { name:"Rocket",   icon:"🚀", type:"ranged", damage:75, splash:85, cooldown:1450, bulletSpeed:480, spread:0.02, ammoCost:8, cost:600, order:10 },
+  fists: {
+    name: "Fists",
+    icon: "👊",
+    type: "melee",
+    damage: 5,
+    range: 44,
+    arc: 1.1,
+    cooldown: 420,
+    cost: 0,
+    order: 1,
+    harvest: {
+      tree: { wood: 1, leaf: 1 },
+      rock: { stone: 1 },
+      ore: { metal: 1 }
+    }
+  },
+
+  axe: {
+    name: "Axe",
+    icon: "🪓",
+    type: "melee",
+    damage: 16,
+    range: 50,
+    arc: 1.0,
+    cooldown: 480,
+    cost: 60,
+    order: 2,
+    harvest: {
+      tree: 11,
+      rock: 3,
+      ore: 2
+    }
+  },
+
+  pickaxe: {
+    name: "Pickaxe",
+    icon: "⛏",
+    type: "melee",
+    damage: 11,
+    range: 50,
+    arc: 1.0,
+    cooldown: 460,
+    cost: 60,
+    order: 3,
+    harvest: {
+      tree: 2,
+      rock: 11,
+      ore: 9
+    }
+  },
+
+  pistol: {
+    name: "Pistol",
+    icon: "🔫",
+    type: "ranged",
+    damage: 11,
+    cooldown: 290,
+    bulletSpeed: 640,
+    spread: 0.05,
+    ammoCost: 1,
+    cost: 150,
+    order: 4
+  },
+
+  smg: {
+    name: "SMG",
+    icon: "💥",
+    type: "ranged",
+    damage: 6,
+    cooldown: 95,
+    bulletSpeed: 680,
+    spread: 0.13,
+    ammoCost: 1,
+    cost: 320,
+    order: 5
+  },
+
+  shotgun: {
+    name: "Shotgun",
+    icon: "✹",
+    type: "ranged",
+    damage: 9,
+    pellets: 6,
+    cooldown: 680,
+    bulletSpeed: 600,
+    spread: 0.38,
+    ammoCost: 3,
+    cost: 480,
+    order: 6
+  },
+
+  rifle: {
+    name: "Rifle",
+    icon: "🎯",
+    type: "ranged",
+    damage: 20,
+    cooldown: 240,
+    bulletSpeed: 760,
+    spread: 0.04,
+    ammoCost: 2,
+    cost: 720,
+    order: 7
+  },
+
+  sniper: {
+    name: "Sniper",
+    icon: "🏹",
+    type: "ranged",
+    damage: 65,
+    cooldown: 1150,
+    bulletSpeed: 1100,
+    spread: 0.008,
+    ammoCost: 4,
+    cost: 1100,
+    order: 8
+  },
+
+  rocket: {
+    name: "Rocket",
+    icon: "🚀",
+    type: "ranged",
+    damage: 75,
+    splash: 85,
+    cooldown: 1450,
+    bulletSpeed: 480,
+    spread: 0.02,
+    ammoCost: 8,
+    cost: 1800,
+    order: 9
+  }
 };
 const WEAPON_ORDER = Object.keys(WEAPONS).sort((a,b)=>WEAPONS[a].order-WEAPONS[b].order);
 
