@@ -95,8 +95,17 @@ canvas{position:fixed; top:0; left:0; display:block;}
   font-family:var(--font-head); font-weight:600; font-size:14px;
 }
 .res-chip.gold{ color:var(--amber); }
+.mini-bar-row{ display:flex; gap:10px; margin:6px 0 8px; }
+.mini-bar{ display:flex; align-items:center; gap:5px; flex:1; }
+.mini-ic{ font-size:13px; }
+.mini-track{ flex:1; height:8px; border-radius:3px; background:#1a1f16; border:1px solid var(--panel-border); overflow:hidden; }
+.mini-fill{ height:100%; width:100%; transition:width .2s ease; }
+.mini-fill.hunger{ background:linear-gradient(90deg,#a1662f,#e0a831); }
+.mini-fill.thirst{ background:linear-gradient(90deg,#1c5f8a,#4fc3f7); }
+
 .res-chip.wood{ color:#c98a4b; }
 .res-chip.leaf{ color:#7cb342; }
+.res-chip.food{ color:#e0a831; }
 .res-chip.stone{ color:var(--steel); }
 .res-chip.metal{ color:#9fb8c9; }
 .res-chip.ammo{ color:var(--blood); }
