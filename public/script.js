@@ -32,6 +32,7 @@ const CONFIG = {
   COLD_DMG_PENALTY_MAX: 0.35,
 };
 
+   
 /* ============================== UTIL ============================== */
 const rand = (a, b) => a + Math.random() * (b - a);
 const randInt = (a, b) => Math.floor(rand(a, b + 1));
