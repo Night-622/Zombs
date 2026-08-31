@@ -1223,7 +1223,7 @@ function tryPlayerAttack(dt) {
 /* ============================== BOW CHARGE / RELEASE ============================== */
 function releaseBow() {
   const p = G.player;
-  if (!p.charging) return;
+  if (!p || !G.running || !p.charging) return;
   const held = G.time - p.chargeStart;
   p.charging = false;
   if (G.mode === "build" || p.currentWeapon !== "bow" || !G.running || G.paused) return;
