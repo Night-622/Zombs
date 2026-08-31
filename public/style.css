@@ -70,6 +70,30 @@ canvas{position:fixed; top:0; left:0; display:block;}
 }
 .start-howto b{ color:var(--amber); margin-right:6px; }
 
+.start-layout{ display:flex; gap:22px; align-items:flex-start; flex-wrap:wrap; justify-content:center; }
+.mp-card{ width:300px; text-align:left; }
+.mp-title{ font-family:var(--font-head); font-weight:700; font-size:20px; letter-spacing:2px; color:var(--toxic); margin:0 0 12px; text-align:center; }
+.mp-blurb{ font-size:13px; margin-bottom:12px; }
+.mp-panel{ display:flex; flex-direction:column; gap:10px; }
+.mp-code{
+  margin-top:12px; text-align:center; font-family:var(--font-head); font-weight:700;
+  font-size:34px; letter-spacing:10px; color:var(--amber); background:#171c12;
+  border:1px solid var(--panel-border); border-radius:6px; padding:12px;
+}
+.mp-input{
+  font-family:var(--font-head); font-weight:700; font-size:24px; letter-spacing:10px;
+  text-align:center; background:#171c12; color:var(--text); border:1px solid var(--panel-border);
+  border-radius:6px; padding:10px; width:100%;
+}
+.mp-status{ min-height:18px; font-size:13px; color:var(--toxic); text-align:center; margin-top:8px; }
+.mp-status.warn{ color:var(--blood); }
+.mp-note{ font-size:11px; color:var(--text-dim); margin-top:14px; line-height:1.4; }
+.mp-code-overlay{
+  margin-top:6px; font-family:var(--font-head); font-weight:700; font-size:20px; letter-spacing:6px;
+  color:var(--amber); background:rgba(18,22,15,.9); border:1px solid var(--amber);
+  border-radius:6px; padding:6px 14px; display:inline-block;
+}
+
 /* ============ HUD ============ */
 #hud{ position:fixed; inset:0; z-index:10; pointer-events:none; font-family:var(--font-body); }
 #hud *{ pointer-events:auto; }
