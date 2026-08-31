@@ -1152,6 +1152,7 @@ function updateBuildings(dt) {
 /* ============================== PARRY / SWING COOLDOWN TICKS ============================== */
 function updateCombatTimers(dt) {
   for (const ch of allCharacters()) {
+    if (ch.lastAttack>0) ch.lastAttack = Math.max(0, ch.lastAttack-dt*1000);
     if (ch.parryT>0) ch.parryT = Math.max(0, ch.parryT-dt*1000);
     if (ch.parryCooldownT>0) ch.parryCooldownT = Math.max(0, ch.parryCooldownT-dt*1000);
     if (ch.meleeSwingT>0) ch.meleeSwingT = Math.max(0, ch.meleeSwingT-dt*1000);
@@ -1163,7 +1164,6 @@ function attackFor(ch, aimAngle, dt) {
   if (ch.downed) return;
   const w = WEAPONS[ch.currentWeapon];
   if (w.type === "bow") return;
-  ch.lastAttack -= dt*1000;
   if (ch.lastAttack > 0) return;
   const dmgMult = playerDmgMult(ch);
   if (w.type==="melee") {
@@ -1356,6 +1356,7 @@ function updateNodes(dt) {
 
 /* ============================== CAMERA ============================== */
 function updateCamera() {
+  if (!G.player) return;
   G.camera.x = G.player.x; G.camera.y = G.player.y;
   mouse.worldX = mouse.x - W/2 + G.camera.x;
   mouse.worldY = mouse.y - H/2 + G.camera.y;
@@ -1981,19 +1982,28 @@ async function mpJoin(code) {
     const snap = await get(ref(rtdb, `sessions/${code}`));
     if (!snap.exists()) { mpSetStatus("No game found with that code.", true); return; }
 
-    MP.active = true; MP.isHost = false; MP.code = code; MP.uid = uid;
+    MP.isHost = false; MP.code = code; MP.uid = uid;
+    MP.remoteBodies = {}; MP.remoteInputs = {}; MP.remoteSeq = {};
+
+    // Set up all G state the render loop touches BEFORE flipping MP.active —
+    // the loop runs continuously via requestAnimationFrame and will start
+    // branching into the thin-client path the instant MP.active is true,
+    // even mid-await, so G.player must already exist by then.
+    G.player = newPlayer();
+    G.buildings = []; G.enemies = []; G.animals = []; G.bullets = []; G.particles = []; G.floaters = []; G.groundItems = [];
+    G.ponds = []; G.structures = []; G.nodes = [];
+    G.running = false;
+
+    MP.active = true;
+
     await set(ref(rtdb, `sessions/${code}/players/${uid}`), { name: "Survivor "+uid.slice(0,4), joinedAt: Date.now() });
     onDisconnect(ref(rtdb, `sessions/${code}/players/${uid}`)).remove();
     onDisconnect(ref(rtdb, `sessions/${code}/inputs/${uid}`)).remove();
 
-    G.player = newPlayer();
-    G.buildings = []; G.enemies = []; G.animals = []; G.bullets = []; G.particles = []; G.floaters = []; G.groundItems = [];
-    G.ponds = []; G.structures = []; G.nodes = [];
-
     const snapUnsub = onValue(ref(rtdb, `sessions/${code}/snapshot`), s => {
       const data = s.val();
       if (!data) return;
-      applySnapshot(data);
+      try { applySnapshot(data); } catch (e) { console.error("applySnapshot failed", e); return; }
       if (!G.running) {
         G.running = true; G.paused = false; G.gameOver = false;
         showScreen(null); buildHotbar();
@@ -2156,17 +2166,21 @@ let lastT = performance.now();
 function loop(t) {
   let dt = (t-lastT)/1000; lastT=t;
   dt = Math.min(dt, 0.05);
-  if (MP.active && !MP.isHost) {
-    // Thin client: no local simulation of the shared world, just input + render.
-    G.time += dt*1000;
-    mpTick();
-    updateFx(dt);
-    updateCamera();
-    updateUI();
-  } else {
-    update(dt);
+  try {
+    if (MP.active && !MP.isHost) {
+      // Thin client: no local simulation of the shared world, just input + render.
+      G.time += dt*1000;
+      mpTick();
+      updateFx(dt);
+      updateCamera();
+      updateUI();
+    } else {
+      update(dt);
+    }
+    if (G.running || G.gameOver) render();
+  } catch (e) {
+    console.error("Frame error (recovered, continuing):", e);
   }
-  if (G.running || G.gameOver) render();
   requestAnimationFrame(loop);
 }
 
