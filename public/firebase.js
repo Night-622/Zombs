@@ -11,7 +11,9 @@ const firebaseConfig = {
   storageBucket: "zomb-io.firebasestorage.app",
   messagingSenderId: "1073795238758",
   appId: "1:1073795238758:web:64c7a311ff0d38c7b116a7",
-  measurementId: "G-FH2H7H34ZB"
+  measurementId: "G-FH2H7H34ZB",
+  // Add your specific database URL right here:
+  databaseURL: "https://zomb-io-default-rtdb.asia-southeast1.firebasedatabase.app"
 };
 
 const app = initializeApp(firebaseConfig);
