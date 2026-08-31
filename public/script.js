@@ -13,7 +13,7 @@
 
 import { auth, rtdb } from "./firebase.js?v=3";
 import { signInAnonymously } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
-import { ref, set, update, onValue, remove, get, onDisconnect } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
+import { ref, set, update as dbUpdate, onValue, remove, get, onDisconnect } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
 
 (() => {
 "use strict";
@@ -95,7 +95,7 @@ const STARTER_WEAPONS = ["fists","hatchet","bow"];
 
 /* ============================== DATA: ENEMIES ============================== */
 const ENEMY_TYPES = {
-  zombie:  { name:"Zombie",   hp:35,  speed:62,  damage:9,  gold:10, radius:14, color:"#5fae3d", minWave:1 },
+  zombie:  { name:"Zombie",   hp:35,  speed:95,  damage:9,  gold:10, radius:14, color:"#5fae3d", minWave:1 },
   runner:  { name:"Runner",   hp:10,  speed:108, damage:6,  gold:20, radius:11, color:"#e0c93f", minWave:2 },
   thrower: { name:"Thrower",  hp:26,  speed:48,  damage:10, gold:20, radius:13, color:"#8a9a4a", minWave:2,
              ranged:true, projSpeed:260, atkRange:260, atkCooldown:3000 },
@@ -233,7 +233,7 @@ function newPlayer() {
   return {
     x: CONFIG.WORLD_SIZE/2, y: CONFIG.WORLD_SIZE/2,
     hp: 50, maxHp: 50,
-    baseSpeed: 72,
+    baseSpeed: 190,
     facing: 0,
     moving: false,
     inWater: false, submergedT: 0,
@@ -393,11 +393,13 @@ function loadFromData(data) {
   G.buildings = (data.buildings||[]).map(b => {
     const def = BUILDING_TYPES[b.type];
     if (!def) return null;
-    return { ...b, maxHp: b.reinforceLvl ? Math.round(def.hp*Math.pow(1.25,b.reinforceLvl)) : def.hp,
-      cooldownT:0, healT:0, reinforceLvl: b.reinforceLvl||0, stockedForNight: b.stockedForNight!==undefined ? b.stockedForNight : true,
-      growT: def.farm ? (b.growT ?? def.growMs) : undefined,
-      ready: def.farm ? (b.ready||false) : undefined,
-      storage: def.storage ? (b.storage || Object.fromEntries(STORABLE_KEYS.map(k=>[k,0]))) : undefined };
+    const built = { ...b, maxHp: b.reinforceLvl ? Math.round(def.hp*Math.pow(1.25,b.reinforceLvl)) : def.hp,
+      cooldownT:0, healT:0, reinforceLvl: b.reinforceLvl||0, stockedForNight: b.stockedForNight!==undefined ? b.stockedForNight : true };
+    if (def.farm) { built.growT = b.growT ?? def.growMs; built.ready = b.ready||false; }
+    else { delete built.growT; delete built.ready; }
+    if (def.storage) { built.storage = b.storage || Object.fromEntries(STORABLE_KEYS.map(k=>[k,0])); }
+    else { delete built.storage; }
+    return built;
   }).filter(Boolean);
   G.enemies = []; G.animals = []; G.bullets = []; G.particles = []; G.floaters = []; G.groundItems = [];
   G.animalSpawnTimer = 3000;
@@ -612,11 +614,11 @@ function spawnFloater(x, y, text, color) {
 }
 
 /* ============================== BULLETS ============================== */
-function fireBullet({x,y,angle,speed,damage,faction,splash,color,owner}) {
+function fireBullet({x,y,angle,speed,damage,faction,splash,color}) {
   G.bullets.push({
     x, y, vx: Math.cos(angle)*speed, vy: Math.sin(angle)*speed,
     damage, faction, splash: splash||0, color: color||(faction==="player"?"#ffe082":"#c96b4a"),
-    life: 1.8, owner,
+    life: 1.8,
   });
 }
 
@@ -2061,12 +2063,25 @@ function mpBuildSnapshot() {
   };
 }
 
+// Firebase throws SYNCHRONOUSLY if any value anywhere in a written object is
+// `undefined` — which would otherwise kill the whole frame loop (the throw
+// happens before requestAnimationFrame(loop) runs again). Strip it out.
+function sanitizeForFirebase(value) {
+  if (value === undefined) return null;
+  if (value === null || typeof value !== "object") return value;
+  if (Array.isArray(value)) return value.map(sanitizeForFirebase);
+  const out = {};
+  for (const k in value) out[k] = sanitizeForFirebase(value[k]);
+  return out;
+}
 function mpTick() {
   if (!MP.active) return;
   if (MP.isHost) {
     if (G.time - MP.lastBroadcast > CONFIG.MP_BROADCAST_MS) {
       MP.lastBroadcast = G.time;
-      set(ref(rtdb, `sessions/${MP.code}/snapshot`), mpBuildSnapshot()).catch(()=>{});
+      try {
+        set(ref(rtdb, `sessions/${MP.code}/snapshot`), sanitizeForFirebase(mpBuildSnapshot())).catch(()=>{});
+      } catch (e) { console.warn("mp snapshot write failed", e); }
     }
   } else {
     if (G.time - MP.lastInputSend > CONFIG.MP_INPUT_MS) {
@@ -2077,11 +2092,13 @@ function mpTick() {
       if (keys["a"]||keys["arrowleft"]) dx-=1;
       if (keys["d"]||keys["arrowright"]) dx+=1;
       const aimAngle = angleTo(G.player.x, G.player.y, mouse.worldX, mouse.worldY);
-      update(ref(rtdb, `sessions/${MP.code}/inputs/${MP.uid}`), {
-        dx, dy, aimAngle, mouseDown: !!mouse.down, sprint: !!keys["shift"],
-        weapon: G.player.currentWeapon,
-        interactSeq: MP.localSeq.interact, eatSeq: MP.localSeq.eat, t: Date.now(),
-      }).catch(()=>{});
+      try {
+        dbUpdate(ref(rtdb, `sessions/${MP.code}/inputs/${MP.uid}`), sanitizeForFirebase({
+          dx, dy, aimAngle, mouseDown: !!mouse.down, sprint: !!keys["shift"],
+          weapon: G.player.currentWeapon,
+          interactSeq: MP.localSeq.interact, eatSeq: MP.localSeq.eat, t: Date.now(),
+        })).catch(()=>{});
+      } catch (e) { console.warn("mp input write failed", e); }
       // Light local prediction so the joined player's own body feels responsive.
       moveCharacter(G.player, dx, dy, !!keys["shift"], 1/60);
       G.player.facing = aimAngle;
