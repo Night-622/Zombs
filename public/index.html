@@ -12,6 +12,7 @@
 
   <!-- ======================= START SCREEN ======================= -->
   <div id="startScreen" class="overlay-screen">
+    <div class="start-layout">
     <div class="start-card">
       <h1 class="logo">ZOMBS<span>: OUTBREAK</span></h1>
       <p class="tagline">Gather by day. Build your walls. Survive the horde by night.</p>
@@ -27,8 +28,11 @@
 
       <div class="start-howto">
         <div><b>WASD</b> Move</div>
+        <div><b>Shift</b> Sprint</div>
         <div><b>Mouse</b> Aim / Fire</div>
         <div><b>1-9</b> Weapons</div>
+        <div><b>Hold 1-9</b> Drop item</div>
+        <div><b>Q</b> Parry (sword)</div>
         <div><b>B</b> Build Menu</div>
         <div><b>U</b> Upgrades</div>
         <div><b>E</b> Harvest / Repair / Drink</div>
@@ -37,11 +41,33 @@
         <div><b>Hold Click</b> Charge bow</div>
       </div>
     </div>
+
+    <div class="start-card mp-card">
+      <h2 class="mp-title">MULTIPLAYER</h2>
+      <div class="tabs">
+        <button class="tab active" id="mpTabHost" data-mptab="host">HOST</button>
+        <button class="tab" id="mpTabJoin" data-mptab="join">JOIN</button>
+      </div>
+      <div id="mpHostPanel" class="mp-panel">
+        <p class="tagline mp-blurb">Host your save. Friends join using your 4-digit code. Hold <b>Shift</b> in-game to reveal it.</p>
+        <button id="btnHostGame" class="btn btn-primary">HOST GAME</button>
+        <div id="mpHostCode" class="mp-code hidden"></div>
+      </div>
+      <div id="mpJoinPanel" class="mp-panel hidden">
+        <p class="tagline mp-blurb">Enter the host's 4-digit code to join their world.</p>
+        <input id="mpCodeInput" class="mp-input" maxlength="4" inputmode="numeric" placeholder="0000">
+        <button id="btnJoinGame" class="btn btn-primary">JOIN GAME</button>
+      </div>
+      <div id="mpStatus" class="mp-status"></div>
+      <p class="mp-note">Multiplayer note: while connected, building &amp; crafting menus are host-only. Everyone shares the host's resources and can fight, gather, and pick up dropped items together.</p>
+    </div>
+    </div>
   </div>
 
   <!-- ======================= GAME CANVAS ======================= -->
   <canvas id="gameCanvas"></canvas>
   <canvas id="minimapCanvas"></canvas>
+
 
   <!-- ======================= TOP HUD ======================= -->
   <div id="hud" class="hidden">
@@ -70,6 +96,7 @@
       <div id="phaseLabel" class="phase-label day">☀ DAY 1</div>
       <div class="phase-bar"><div id="phaseFill" class="phase-fill"></div></div>
       <div id="waveLabel" class="wave-label"></div>
+      <div id="mpCodeOverlay" class="mp-code-overlay hidden"></div>
     </div>
 
     <div class="hud-top-right">
@@ -100,8 +127,15 @@
       <div id="tabCraft" class="tab-panel hidden"></div>
     </div>
 
+    <!-- ======================= STATION (furnace / storage chest) ======================= -->
+    <div id="stationMenu" class="side-panel hidden">
+      <h2 id="stationTitle">STATION <button id="btnStationClose" class="si-btn">CLOSE</button></h2>
+      <div id="stationList" class="grid-list"></div>
+    </div>
+
     <div id="toast" class="toast"></div>
   </div>
+
 
   <!-- ======================= GAME OVER ======================= -->
   <div id="gameOverScreen" class="overlay-screen hidden">
@@ -130,6 +164,6 @@
     </div>
   </div>
 
-  <script src="script.js"></script>
+  <script type="module" src="script.js"></script>
 </body>
 </html>
