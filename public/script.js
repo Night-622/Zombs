@@ -11,7 +11,7 @@
    crafting, and station menus are host-only in this version.
    ============================================================================ */
 
-import { auth, rtdb } from "./firebase.js";
+import { auth, rtdb } from "./firebase.js?v=3";
 import { signInAnonymously } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
 import { ref, set, update, onValue, remove, get, onDisconnect } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
 
