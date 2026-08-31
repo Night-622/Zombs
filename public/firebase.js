@@ -1,11 +1,9 @@
-// Firebase
-import { initializeApp } from "firebase/app";
-import { getAnalytics } from "firebase/analytics";
-import { getFirestore } from "firebase/firestore";
-import { getAuth } from "firebase/auth";
-import { getDatabase } from "firebase/database";
+// Firebase — initialized via the CDN modular SDK so this works with zero
+// build step (no bundler needed for bare "firebase/app" style imports).
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+import { getAuth } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
+import { getDatabase } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
 
-// Your Firebase configuration
 const firebaseConfig = {
   apiKey: "AIzaSyDUL2hCXbG8WDW1XuLb3c-37rn4pkOHPWY",
   authDomain: "zomb-io.firebaseapp.com",
@@ -16,19 +14,8 @@ const firebaseConfig = {
   measurementId: "G-FH2H7H34ZB"
 };
 
-// Initialize Firebase
 const app = initializeApp(firebaseConfig);
-
-// Firebase services
-const analytics = getAnalytics(app);
-const db = getFirestore(app);
 const auth = getAuth(app);
-const realtimeDb = getDatabase(app);
+const rtdb = getDatabase(app);
 
-export {
-  app,
-  analytics,
-  db,
-  auth,
-  realtimeDb
-};
+export { app, auth, rtdb };
