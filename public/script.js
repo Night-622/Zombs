@@ -88,10 +88,10 @@ const WEAPONS = {
              harvest:{ tree:{wood:1,leaf:1}, rock:{stone:9}, ore:{metal:7} } },
   bow:     { name:"Bow",      icon:"🏹", type:"bow", matCost:null, order:4, ammoCost:1, bulletSpeed:760,
              minDmg:4, midDmgMin:8, midDmgMax:12, maxDmg:16, minChargeMs:220, maxChargeMs:900 },
-  sword:   { name:"Sword",    icon:"🗡", type:"melee",  damage:25, range:52, arc:1.0, cooldown:600, matCost:{wood:15,metal:40}, order:5, parryable:true },
+  sword:   { name:"Sword",    icon:"🗡", type:"melee",  damage:25, range:52, arc:1.0, cooldown:600, matCost:null, order:5, parryable:true },
 };
 const WEAPON_ORDER = Object.keys(WEAPONS).sort((a,b)=>WEAPONS[a].order-WEAPONS[b].order);
-const STARTER_WEAPONS = ["fists","hatchet","bow"];
+const STARTER_WEAPONS = ["fists","hatchet","bow","sword"];
 
 /* ============================== DATA: ENEMIES ============================== */
 const ENEMY_TYPES = {
@@ -384,6 +384,7 @@ function loadFromData(data) {
   if (!p.upgrades.territory) p.upgrades.territory = 0;
   p.weapons = (p.weapons||STARTER_WEAPONS.slice()).map(k => k==="axe" ? "hatchet" : k).filter(k => WEAPONS[k]);
   if (p.weapons.length===0) p.weapons = STARTER_WEAPONS.slice();
+  if (!p.weapons.includes("sword")) p.weapons.push("sword");
   if (p.currentWeapon === "axe") p.currentWeapon = "hatchet";
   if (!WEAPONS[p.currentWeapon]) p.currentWeapon = p.weapons[0] || "fists";
   p.charging = false; p.meleeSwingT = 0; p.isRemote = false;
@@ -861,13 +862,17 @@ function dropWeaponSlot(index) {
   if (!key || key === "fists") return;
   G.player.weapons = G.player.weapons.filter(k => k !== key);
   if (G.player.currentWeapon === key) G.player.currentWeapon = "fists";
-  G.groundItems.push({ type:"weapon", key, x:G.player.x, y:G.player.y, life:CONFIG.GROUND_ITEM_LIFE, bobPhase: rand(0,10) });
+  const dropX = G.player.x + Math.cos(G.player.facing)*44;
+  const dropY = G.player.y + Math.sin(G.player.facing)*44;
+  G.groundItems.push({ type:"weapon", key, x:dropX, y:dropY, life:CONFIG.GROUND_ITEM_LIFE, bobPhase: rand(0,10), noPickupT: 900 });
   buildHotbar();
   toast(`Dropped ${WEAPONS[key].name}.`);
 }
 function updateGroundItems(dt) {
   for (const it of G.groundItems) {
     it.life -= dt*1000;
+    if (it.noPickupT > 0) it.noPickupT -= dt*1000;
+    if (it.noPickupT > 0) continue;
     for (const ch of allCharacters()) {
       if (it.picked) continue;
       if (dist(ch.x,ch.y,it.x,it.y) < 24) {
@@ -1418,7 +1423,7 @@ function update(dt) {
   updateCombatTimers(dt);
   updateCamera();
   updateFx(dt);
-  mpTick();
+  mpTick(dt);
 
   G.lastAutosave += dt*1000;
   if (G.lastAutosave > CONFIG.AUTOSAVE_MS) { G.lastAutosave=0; saveToLocalStorage(); }
@@ -1587,6 +1592,23 @@ function render() {
   renderMinimap();
 }
 
+// Simple procedural tool shapes (no dedicated sprite assets for these yet —
+// swap in real sprites the same way player/bow/sword were wired if provided).
+function drawHatchetShape(sc) {
+  ctx.strokeStyle = "#6b4a2c"; ctx.lineWidth = 2.4*sc/2.4; ctx.lineCap = "round";
+  ctx.beginPath(); ctx.moveTo(-1*sc, 7*sc); ctx.lineTo(1*sc, -6*sc); ctx.stroke();
+  ctx.fillStyle = "#9aa0a6";
+  ctx.beginPath();
+  ctx.moveTo(1*sc,-6*sc); ctx.lineTo(7*sc,-4*sc); ctx.lineTo(6*sc,-11*sc); ctx.lineTo(0*sc,-9*sc);
+  ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = "#5a5f63"; ctx.lineWidth = 1; ctx.stroke();
+}
+function drawPickaxeShape(sc) {
+  ctx.strokeStyle = "#6b4a2c"; ctx.lineWidth = 2.4*sc/2.4; ctx.lineCap = "round";
+  ctx.beginPath(); ctx.moveTo(-1*sc, 7*sc); ctx.lineTo(1*sc, -6*sc); ctx.stroke();
+  ctx.strokeStyle = "#8d97a0"; ctx.lineWidth = 3.2*sc/2.4; ctx.lineCap = "round";
+  ctx.beginPath(); ctx.moveTo(-6*sc,-9*sc); ctx.lineTo(8*sc,-4*sc); ctx.stroke();
+}
 function renderCharacter(ch) {
   if (ch.downed) {
     ctx.save();
@@ -1631,8 +1653,12 @@ function renderCharacter(ch) {
     ctx.save();
     ctx.translate(handX, handY);
     ctx.rotate(ch.facing + angleOffset*dir);
-    if (swordImg.complete && swordImg.naturalWidth > 0) {
-      ctx.drawImage(swordImg, -8*sc, -13*sc, 16*sc, 16*sc);
+    if (ch.currentWeapon === "sword") {
+      if (swordImg.complete && swordImg.naturalWidth > 0) ctx.drawImage(swordImg, -8*sc, -13*sc, 16*sc, 16*sc);
+    } else if (ch.currentWeapon === "hatchet") {
+      drawHatchetShape(sc);
+    } else if (ch.currentWeapon === "pickaxe") {
+      drawPickaxeShape(sc);
     }
     ctx.restore();
   }
@@ -2032,7 +2058,7 @@ function applySnapshot(data) {
   if (data.team) Object.assign(G.player, data.team);
   const myData = data.players && data.players[MP.uid];
   if (myData) {
-    G.player.x=myData.x; G.player.y=myData.y; G.player.hp=myData.hp; G.player.maxHp=myData.maxHp;
+    G.player.hp=myData.hp; G.player.maxHp=myData.maxHp;
     G.player.currentWeapon = myData.currentWeapon; G.player.hunger=100; G.player.thirst=100;
   }
   MP.remoteBodies = {};
@@ -2084,7 +2110,7 @@ function sanitizeForFirebase(value) {
   for (const k in value) out[k] = sanitizeForFirebase(value[k]);
   return out;
 }
-function mpTick() {
+function mpTick(dt) {
   if (!MP.active) return;
   if (MP.isHost) {
     if (G.time - MP.lastBroadcast > CONFIG.MP_BROADCAST_MS) {
@@ -2094,14 +2120,21 @@ function mpTick() {
       } catch (e) { console.warn("mp snapshot write failed", e); }
     }
   } else {
+    // Move + aim every frame with the real frame dt — this is authoritative for
+    // OUR OWN camera/rendering so it feels exactly like normal single-player
+    // movement, regardless of network latency. The host still simulates this
+    // body for combat/world purposes from the throttled input we send it below.
+    let dx=0,dy=0;
+    if (keys["w"]||keys["arrowup"]) dy-=1;
+    if (keys["s"]||keys["arrowdown"]) dy+=1;
+    if (keys["a"]||keys["arrowleft"]) dx-=1;
+    if (keys["d"]||keys["arrowright"]) dx+=1;
+    const aimAngle = angleTo(G.player.x, G.player.y, mouse.worldX, mouse.worldY);
+    moveCharacter(G.player, dx, dy, !!keys["shift"], dt);
+    G.player.facing = aimAngle;
+
     if (G.time - MP.lastInputSend > CONFIG.MP_INPUT_MS) {
       MP.lastInputSend = G.time;
-      let dx=0,dy=0;
-      if (keys["w"]||keys["arrowup"]) dy-=1;
-      if (keys["s"]||keys["arrowdown"]) dy+=1;
-      if (keys["a"]||keys["arrowleft"]) dx-=1;
-      if (keys["d"]||keys["arrowright"]) dx+=1;
-      const aimAngle = angleTo(G.player.x, G.player.y, mouse.worldX, mouse.worldY);
       try {
         dbUpdate(ref(rtdb, `sessions/${MP.code}/inputs/${MP.uid}`), sanitizeForFirebase({
           dx, dy, aimAngle, mouseDown: !!mouse.down, sprint: !!keys["shift"],
@@ -2109,9 +2142,6 @@ function mpTick() {
           interactSeq: MP.localSeq.interact, eatSeq: MP.localSeq.eat, t: Date.now(),
         })).catch(()=>{});
       } catch (e) { console.warn("mp input write failed", e); }
-      // Light local prediction so the joined player's own body feels responsive.
-      moveCharacter(G.player, dx, dy, !!keys["shift"], 1/60);
-      G.player.facing = aimAngle;
     }
   }
 }
@@ -2170,7 +2200,7 @@ function loop(t) {
     if (MP.active && !MP.isHost) {
       // Thin client: no local simulation of the shared world, just input + render.
       G.time += dt*1000;
-      mpTick();
+      mpTick(dt);
       updateFx(dt);
       updateCamera();
       updateUI();
