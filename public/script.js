@@ -221,7 +221,7 @@ const MP = {
   remoteBodies: {},   // host: uid -> simulated body for a joined player
   remoteInputs: {},   // host: uid -> latest input from that player
   remoteSeq: {},       // host: uid -> {interact, eat} last-processed sequence numbers
-  localSeq: { interact: 0, eat: 0 }, // joined client: counters sent to host
+  localSeq: { interact: 0, eat: 0, parry: 0 }, // joined client: counters sent to host
   lastBroadcast: 0,
   lastInputSend: 0,
   unsubs: [],
@@ -496,9 +496,18 @@ function selectHotbarIndex(i) {
 
 /* Wrappers so keybinds act on the local player, while the host can call the
    same *For(ch) functions for remote bodies it simulates. */
-function doInteract(){ interactFor(G.player); }
-function doEat(){ eatFoodFor(G.player); }
-function doParry(){ parryFor(G.player); }
+function doInteract(){
+  if (MP.active && !MP.isHost) { MP.localSeq.interact++; return; }
+  interactFor(G.player);
+}
+function doEat(){
+  if (MP.active && !MP.isHost) { MP.localSeq.eat++; return; }
+  eatFoodFor(G.player);
+}
+function doParry(){
+  if (MP.active && !MP.isHost) { MP.localSeq.parry++; return; }
+  parryFor(G.player);
+}
 
 /* ============================== COMBAT HELPERS ============================== */
 function parryFor(ch) {
@@ -1228,23 +1237,27 @@ function tryPlayerAttack(dt) {
 }
 
 /* ============================== BOW CHARGE / RELEASE ============================== */
-function releaseBow() {
-  const p = G.player;
-  if (!p || !G.running || !p.charging) return;
-  const held = G.time - p.chargeStart;
-  p.charging = false;
-  if (G.mode === "build" || p.currentWeapon !== "bow" || !G.running || G.paused) return;
+function releaseBowFor(ch) {
+  if (!ch || !ch.charging) return;
+  const held = G.time - ch.chargeStart;
+  ch.charging = false;
+  if (ch.currentWeapon !== "bow") return;
   const w = WEAPONS.bow;
-  if (p.ammo < w.ammoCost) { toast("Out of arrows — craft more at a bench.", true); return; }
+  if (G.player.ammo < w.ammoCost) { if (ch===G.player) toast("Out of arrows — craft more at a bench.", true); return; }
   let dmg;
   if (held < w.minChargeMs) dmg = w.minDmg;
   else if (held < w.maxChargeMs) dmg = lerp(w.midDmgMin, w.midDmgMax, (held-w.minChargeMs)/(w.maxChargeMs-w.minChargeMs));
   else dmg = w.maxDmg;
-  dmg *= playerDmgMult(p);
-  p.ammo -= w.ammoCost;
-  const a = angleTo(p.x, p.y, mouse.worldX, mouse.worldY);
-  fireBullet({ x:p.x, y:p.y, angle:a, speed:w.bulletSpeed, damage:dmg, faction:"player", color:"#e8d9a0" });
-  spawnParticles(p.x, p.y, "#e8d9a0", 3);
+  dmg *= playerDmgMult(ch);
+  G.player.ammo -= w.ammoCost; // arrows are a shared/team resource
+  fireBullet({ x:ch.x, y:ch.y, angle:ch.facing, speed:w.bulletSpeed, damage:dmg, faction:"player", color:"#e8d9a0" });
+  spawnParticles(ch.x, ch.y, "#e8d9a0", 3);
+}
+function releaseBow() {
+  const p = G.player;
+  if (!p || !G.running || G.paused || G.mode === "build") { if (p) p.charging = false; return; }
+  if (MP.active && !MP.isHost) { p.charging = false; return; } // host fires this for us based on our mouseDown edge
+  releaseBowFor(p);
 }
 function bowChargeFraction(ch) {
   if (!ch.charging || ch.currentWeapon !== "bow") return 0;
@@ -1385,11 +1398,22 @@ function updateRemoteBodies(dt) {
     moveCharacter(body, input.dx||0, input.dy||0, !!input.sprint, dt);
     body.facing = input.aimAngle||0;
     if (input.weapon && WEAPONS[input.weapon]) body.currentWeapon = input.weapon;
-    if (input.mouseDown && WEAPONS[body.currentWeapon].type!=="bow") attackFor(body, body.facing, dt);
-    if (input.parry) { parryFor(body); }
-    const seq = MP.remoteSeq[uid] || (MP.remoteSeq[uid] = {interact:0, eat:0});
+
+    const seq = MP.remoteSeq[uid] || (MP.remoteSeq[uid] = {interact:0, eat:0, parry:0, mouseWasDown:false});
+
+    if (WEAPONS[body.currentWeapon].type === "bow") {
+      const nowDown = !!input.mouseDown;
+      if (nowDown && !seq.mouseWasDown) { body.charging = true; body.chargeStart = G.time; }
+      if (!nowDown && seq.mouseWasDown) releaseBowFor(body);
+      seq.mouseWasDown = nowDown;
+    } else {
+      seq.mouseWasDown = false;
+      if (input.mouseDown) attackFor(body, body.facing, dt);
+    }
+
     if ((input.interactSeq||0) > seq.interact) { seq.interact = input.interactSeq; interactFor(body); }
     if ((input.eatSeq||0) > seq.eat) { seq.eat = input.eatSeq; eatFoodFor(body); }
+    if ((input.parrySeq||0) > seq.parry) { seq.parry = input.parrySeq; parryFor(body); }
   }
 }
 
@@ -2139,7 +2163,7 @@ function mpTick(dt) {
         dbUpdate(ref(rtdb, `sessions/${MP.code}/inputs/${MP.uid}`), sanitizeForFirebase({
           dx, dy, aimAngle, mouseDown: !!mouse.down, sprint: !!keys["shift"],
           weapon: G.player.currentWeapon,
-          interactSeq: MP.localSeq.interact, eatSeq: MP.localSeq.eat, t: Date.now(),
+          interactSeq: MP.localSeq.interact, eatSeq: MP.localSeq.eat, parrySeq: MP.localSeq.parry, t: Date.now(),
         })).catch(()=>{});
       } catch (e) { console.warn("mp input write failed", e); }
     }
