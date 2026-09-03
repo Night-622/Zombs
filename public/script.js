@@ -142,6 +142,7 @@ const UPGRADES = {
 
 const ARROW_RECIPE = { amt:30, wood:60, metal:15, leaf:45 };
 const REINFORCE_MAX = 5;
+const TURRET_AMMO_COST = { wood:30, metal:10 };
 
 /* ============================== GLOBAL STATE ============================== */
 const canvas = document.getElementById("gameCanvas");
@@ -730,6 +731,7 @@ function interactFor(ch) {
       }
       return;
     }
+    if (def.turret && !best.stockedForNight) { refuelTurret(best); return; }
     if (best.hp < best.maxHp) { repairBuilding(best); return; }
     if (def.upgradeTo) { upgradeBuilding(best); return; }
     reinforceBuilding(best);
@@ -750,6 +752,48 @@ function smeltAll() {
   p.metal -= scrapsGained*2; p.scraps += scrapsGained;
   spawnFloater(p.x, p.y-24, `+${scrapsGained} scraps`, "#cfd8dc");
   updateUI();
+}
+function refuelTurret(b) {
+  if (b.stockedForNight) { toast("Already loaded with ammo."); return; }
+  if (!canAfford(TURRET_AMMO_COST)) { toast("Need 30 wood, 10 metal to load this turret.", true); return; }
+  pay(TURRET_AMMO_COST);
+  b.stockedForNight = true;
+  spawnFloater(b.x, b.y-24, "ammo loaded!", "#ffd54f");
+  spawnParticles(b.x, b.y, "#ffd54f", 8);
+}
+function getInteractHint(ch) {
+  if (!ch || ch.downed) return null;
+
+  const downedTarget = nearestDownedOther(ch);
+  if (downedTarget) return `Revive ${downedTarget.name || "teammate"}`;
+
+  const node = nearestNodeTo(ch, 60);
+  if (node) {
+    if (node.type === "chest") return "Open Chest";
+    return "Harvest " + (node.type === "tree" ? "Tree" : node.type === "rock" ? "Rock" : "Ore");
+  }
+
+  let best=null, bd=Infinity;
+  for (const b of G.buildings) {
+    if (b.dead) continue;
+    const d = dist(ch.x,ch.y,b.x,b.y);
+    if (d<CONFIG.STATION_RADIUS && d<bd) { bd=d; best=b; }
+  }
+  if (best) {
+    const def = BUILDING_TYPES[best.type];
+    if (def.furnace) return G.player.metal>0 ? "Smelt Metal into Scraps" : "Smelt Metal (need metal)";
+    if (def.storage) return "Open Storage Chest";
+    if (def.farm) return best.ready ? "Harvest Farm Plot" : "Farm Plot Growing...";
+    if (def.turret && !best.stockedForNight) return "Load Ammo (30 wood, 10 metal)";
+    if (best.hp < best.maxHp) return `Repair ${def.name}`;
+    if (def.upgradeTo) return `Upgrade to ${BUILDING_TYPES[def.upgradeTo].name}`;
+    if ((best.reinforceLvl||0) < REINFORCE_MAX) return `Reinforce ${def.name} (needs scraps)`;
+    return null;
+  }
+
+  if (nearPond(ch)) return "Drink Water";
+
+  return null;
 }
 function reinforceBuilding(b) {
   const lvl = b.reinforceLvl||0;
@@ -924,11 +968,11 @@ function startNight() {
   G.waveSpawnTimer = 0;
   G.waveActive = true;
   G.animals = [];
-  const ammoCost = {wood:30, metal:10};
   let shortOnAmmo = 0;
   for (const b of G.buildings) {
     if (b.dead || !BUILDING_TYPES[b.type].turret) continue;
-    if (canAfford(ammoCost)) { pay(ammoCost); b.stockedForNight = true; }
+    if (b.stockedForNight) continue; // already manually loaded — don't charge twice
+    if (canAfford(TURRET_AMMO_COST)) { pay(TURRET_AMMO_COST); b.stockedForNight = true; }
     else { b.stockedForNight = false; shortOnAmmo++; }
   }
   toast(`Night falls — Wave ${G.wave} incoming (${comp.length} enemies)`, false, true);
@@ -937,6 +981,7 @@ function startNight() {
 function startDay() {
   G.phase = "day"; G.day++; G.phaseTimer = dayLengthFor(G.day); G.phaseTotal = G.phaseTimer;
   G.waveActive = false;
+  for (const b of G.buildings) if (BUILDING_TYPES[b.type].turret) b.stockedForNight = false;
   const heal = playerMaxHp(G.player)*0.25;
   G.player.hp = Math.min(playerMaxHp(G.player), G.player.hp+heal);
   toast(`Dawn breaks. Day ${G.day} — gather and rebuild.`);
@@ -1827,7 +1872,7 @@ function buildBuildMenu() {
   const note = document.createElement("div");
   note.className = "si-cost";
   note.style.marginBottom = "4px";
-  note.textContent = "Tip: E repairs, upgrades walls, reinforces with scraps, harvests a ready farm, smelts at a furnace, or opens a storage chest.";
+  note.textContent = "Tip: E repairs, upgrades walls, reinforces with scraps, loads turret ammo, harvests a ready farm, smelts at a furnace, or opens a storage chest — a prompt shows up whenever you're close enough.";
   list.appendChild(note);
   BUILDING_ORDER.forEach(key => {
     const def = BUILDING_TYPES[key];
@@ -1970,6 +2015,11 @@ function updateUI() {
   }
 
   if (G.activeStation) renderStationList();
+
+  const promptEl = document.getElementById("interactPrompt");
+  const hint = getInteractHint(p);
+  if (hint) { promptEl.textContent = `[E] ${hint}`; promptEl.classList.remove("hidden"); }
+  else promptEl.classList.add("hidden");
 }
 
 /* ============================== TOAST ============================== */
