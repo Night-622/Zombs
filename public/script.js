@@ -2085,14 +2085,15 @@ function applySnapshot(data) {
     G.player.hp=myData.hp; G.player.maxHp=myData.maxHp;
     G.player.currentWeapon = myData.currentWeapon; G.player.hunger=100; G.player.thirst=100;
   }
-  MP.remoteBodies = {};
+  const seenUids = {};
   if (data.players) for (const uid in data.players) {
     if (uid===MP.uid) continue;
+    seenUids[uid] = true;
     const pd = data.players[uid];
-    const body = newRemoteBody(pd.name);
-    Object.assign(body, pd);
-    MP.remoteBodies[uid] = body;
+    if (!MP.remoteBodies[uid]) MP.remoteBodies[uid] = newRemoteBody(pd.name);
+    Object.assign(MP.remoteBodies[uid], pd);
   }
+  for (const uid in MP.remoteBodies) if (!seenUids[uid]) delete MP.remoteBodies[uid];
   updateUI();
 }
 
@@ -2103,10 +2104,10 @@ function mpBuildSnapshot() {
     if (!uid) continue;
     players[uid] = {
       x:ch.x, y:ch.y, facing:ch.facing, hp:ch.hp, maxHp:playerMaxHp(ch),
-      currentWeapon:ch.currentWeapon, moving:ch.moving, charging:ch.charging,
+      currentWeapon:ch.currentWeapon, moving:ch.moving, charging:ch.charging, chargeStart:ch.chargeStart,
       inWater:ch.inWater, name: ch===G.player ? "Host" : ch.name,
       meleeSwingT:ch.meleeSwingT, meleeSwingDur:ch.meleeSwingDur, lastAttack:ch.lastAttack,
-      sprint:ch.sprint, isRemote: ch!==G.player,
+      sprint:ch.sprint, isRemote: ch!==G.player, downed:ch.downed, downedT:ch.downedT,
     };
   }
   return {
